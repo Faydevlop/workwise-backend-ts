@@ -61,7 +61,7 @@ exports.managerLogin = managerLogin;
 const ManagerDashboard = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { managerId } = req.params;
-        console.log('request is here');
+        console.log('request is here as manager');
         const managerDetails = yield userModel_1.default.findById(managerId);
         if (!managerDetails) {
             res.status(404).json({ message: 'Manager not found' });
@@ -77,7 +77,6 @@ const ManagerDashboard = (req, res) => __awaiter(void 0, void 0, void 0, functio
         const leaves = yield leaveModel_1.default.find({ userId: { $in: userIds } }).populate('userId'); // Find leaves for all users
         const upcomingMeetings = yield MeetingModal_1.Meeting.find({
             createdBy: managerId,
-            date: { $gte: new Date() }, // Filter by future meetings
             status: 'scheduled'
         });
         const projects = yield projectModel_1.default.find({ department: managerDepId });

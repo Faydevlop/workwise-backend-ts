@@ -28,7 +28,6 @@ const transporter = nodemailer_1.default.createTransport({
     },
 });
 const createLeave = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log('1');
     try {
         const { userId, leaveType, startDate, endDate, reason } = req.body;
         if (!userId || !leaveType || !startDate || !endDate || !reason) {

@@ -107,27 +107,21 @@ const ChangePassword = (req, res) => __awaiter(void 0, void 0, void 0, function*
 });
 exports.ChangePassword = ChangePassword;
 const dashboardData = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
-        const { userId } = req.params;
-        // Fetch upcoming meetings (meetings scheduled for the future)
+        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+        if (!userId) {
+            res.status(401).json({ message: "Unauthorized" });
+            return;
+        }
         const upcomingMeetings = yield MeetingModal_1.Meeting.find({
             participants: userId,
-            date: { $gte: new Date() }, // Filter by future meetings
+            date: { $gte: new Date() },
             status: 'scheduled'
         });
-        // Fetch tasks assigned to the user
-        const tasks = yield taskModel_1.default.find({
-            assignedTo: userId,
-        });
-        // Fetch payroll data for the user
-        const payrollData = yield payrollModel_1.default.find({
-            employee: userId
-        });
-        // Fetch leave requests for the user
-        const leaveRequests = yield leaveModel_1.default.find({
-            userId: userId
-        });
-        // Send the aggregated data as the response
+        const tasks = yield taskModel_1.default.find({ assignedTo: userId });
+        const payrollData = yield payrollModel_1.default.find({ employee: userId });
+        const leaveRequests = yield leaveModel_1.default.find({ userId });
         res.status(200).json({
             upcomingMeetings,
             tasks,

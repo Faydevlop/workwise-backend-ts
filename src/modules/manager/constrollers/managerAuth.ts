@@ -75,7 +75,7 @@ export const ManagerDashboard = async(req:Request,res:Response):Promise<void>=>{
     try {
 
         const { managerId } = req.params;
-    console.log('request is here');
+    console.log('request is here as manager');
 
     const managerDetails = await User.findById(managerId);
     if (!managerDetails) {
@@ -99,7 +99,7 @@ export const ManagerDashboard = async(req:Request,res:Response):Promise<void>=>{
         
         createdBy:managerId,
 
-        date: { $gte: new Date() }, // Filter by future meetings
+        
         status: 'scheduled'
       });
 

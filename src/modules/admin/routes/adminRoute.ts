@@ -1,6 +1,6 @@
 import express, { Router } from "express";
 import { adminLogin, adminSignup } from "../controllers/adminAuthController";
-import { protect } from "../../../middlewares/jwtMiddleware";
+// import authenticateJWT from "../../../middlewares/jwtMiddleware";
 
 
 
@@ -27,6 +27,7 @@ import {
   listTasks,
   projectlisting,
 } from "../controllers/projectController";
+import { authenticateJWT } from "../../../middlewares/jwtMiddleware";
 
 const router: Router = express.Router();
 
@@ -38,35 +39,35 @@ router.post("/login", adminLogin);
 // protected routes
 
 // Adding new User with email verification
-router.post("/adduser", AddUser);
+router.post("/adduser",authenticateJWT, AddUser);
 // Getting all the user Data
-router.get("/getusers", getAllUsers);
+router.get("/getusers",authenticateJWT, getAllUsers);
 // get detials of specific user
-router.get("/getuser/:userId", getSpecificUser);
+router.get("/getuser/:userId",authenticateJWT, getSpecificUser);
 // update user data
-router.put("/updateuser/:userId", updateUser);
+router.put("/updateuser/:userId",authenticateJWT, updateUser);
 // delete a specific user
-router.delete("/deleteuser/:userId", deleteUser);
+router.delete("/deleteuser/:userId",authenticateJWT, deleteUser);
 // get managers and employees
 // router.get("/getmanagers",protect, getAllmanager);
 // router.get("/getUnassignedemployees",protect, getAvilableempo);
 // post for creating new project
-router.post("/addNewProject", addNewProject);
+router.post("/addNewProject",authenticateJWT, addNewProject);
 // get for project listing
-router.get("/getprojects", listProjects);
+router.get("/getprojects",authenticateJWT, listProjects);
 // geting specific project details
-router.get("/project/:projectId", getprojectdetails);
+router.get("/project/:projectId",authenticateJWT, getprojectdetails);
 // edting project
-router.post("/editproject/:projectId", editProject);
+router.post("/editproject/:projectId",authenticateJWT, editProject);
 // delete project
-router.post("/deleteproject/:projectId",deleteProject)
+router.post("/deleteproject/:projectId",authenticateJWT,deleteProject)
 // project listing in tasks
-router.get('/projectlist/:managerId',projectlisting)
+router.get('/projectlist/:managerId',authenticateJWT,projectlisting)
 // admin project wise task listing
-router.get('/listtask/:projectId',listTasks)
+router.get('/listtask/:projectId',authenticateJWT,listTasks)
 // admin dashboard 
-router.get('/dashboard',adminDashboard)
+router.get('/dashboard',authenticateJWT,adminDashboard)
 // admin change password
-router.post('/changepass/:userId',adminChagePass)
+router.post('/changepass/:userId',authenticateJWT,adminChagePass)
 
 export default router;

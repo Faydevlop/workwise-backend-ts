@@ -61,3 +61,18 @@ export const employeeLogin = async (
     res.status(500).json({ error: "An error occurred during login" });
   }
 };
+
+// controllers/authController.ts or wherever your employeeLogin is
+export const employeeLogout = async (req: Request, res: Response): Promise<void> => {
+  try {
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    });
+    res.status(200).json({ message: "Logged out successfully" });
+  } catch (error) {
+    console.error("Logout Error:", error);
+    res.status(500).json({ error: "Logout failed" });
+  }
+};

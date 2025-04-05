@@ -9,3 +9,8 @@ declare global {
     }
   }
 }
+
+interface JwtPayloadWithId extends jwt.JwtPayload {
+  userId: string;
+}
+

@@ -5,26 +5,27 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const MeetingController_1 = require("../controller/MeetingController");
+const jwtMiddleware_1 = require("../../../middlewares/jwtMiddleware");
 const router = express_1.default.Router();
 // Adding New Meeting
-router.post('/addmeeting/:userId', MeetingController_1.createMeeting);
+router.post('/addmeeting/:userId', jwtMiddleware_1.authenticateJWT, MeetingController_1.createMeeting);
 // listing users - add meeting form
-router.get('/listuser/:userId', MeetingController_1.findusers);
+router.get('/listuser/:userId', jwtMiddleware_1.authenticateJWT, MeetingController_1.findusers);
 // listing meeting details - manager
-router.get('/listmeeting/:userId', MeetingController_1.listUser);
+router.get('/listmeeting/:userId', jwtMiddleware_1.authenticateJWT, MeetingController_1.listUser);
 // delete meeting
-router.post('/deletemeeting/:meetingId', MeetingController_1.deleteMeeting);
+router.post('/deletemeeting/:meetingId', jwtMiddleware_1.authenticateJWT, MeetingController_1.deleteMeeting);
 // show the details of the next meet
-router.get('/nextmeet', MeetingController_1.nextmeet);
+router.get('/nextmeet', jwtMiddleware_1.authenticateJWT, MeetingController_1.nextmeet);
 // listing for editpage
-router.get('/listmeeiting/:meetingId/list', MeetingController_1.listforEdit);
+router.get('/listmeeiting/:meetingId/list', jwtMiddleware_1.authenticateJWT, MeetingController_1.listforEdit);
 // meet update route
-router.put('/update/:meetId', MeetingController_1.updateMeeting);
+router.put('/update/:meetId', jwtMiddleware_1.authenticateJWT, MeetingController_1.updateMeeting);
 // hr - admin usege routes
 // listing all users for add user
-router.get('/listallUsers', MeetingController_1.listingallUser);
+router.get('/listallUsers', jwtMiddleware_1.authenticateJWT, MeetingController_1.listingallUser);
 // listing of included list manager - hr - admin
-router.get('/listincludedmeet/:userId', MeetingController_1.includedMeetingList);
+router.get('/listincludedmeet/:userId', jwtMiddleware_1.authenticateJWT, MeetingController_1.includedMeetingList);
 // listing meeting details for employees
-router.get('/listmeeting/:userId/employee', MeetingController_1.meetinglist);
+router.get('/listmeeting/:userId/employee', jwtMiddleware_1.authenticateJWT, MeetingController_1.meetinglist);
 exports.default = router;

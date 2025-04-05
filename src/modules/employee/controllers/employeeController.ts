@@ -9,6 +9,7 @@ import taskModel from "../../TaskManagement/models/taskModel";
 import Payroll from "../../PayrollManagement/models/payrollModel";
 import Leave from "../../leaveManagement/models/leaveModel";
 import nodemailer from "nodemailer";
+import { AuthenticatedRequest } from "../../../middlewares/jwtMiddleware";
 
 const transporter = nodemailer.createTransport({
   service: 'gmail', 
@@ -113,37 +114,25 @@ export const ChangePassword = async (req: Request, res: Response) => {
   }
 };
 
-export const dashboardData = async (req: Request, res: Response): Promise<void> => {
- 
-  
+export const dashboardData = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const { userId } = req.params;
+    const userId = req.user?.id;
+    
+    if (!userId) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
 
-
-    // Fetch upcoming meetings (meetings scheduled for the future)
     const upcomingMeetings = await Meeting.find({
       participants: userId,
-      date: { $gte: new Date() }, // Filter by future meetings
+      date: { $gte: new Date() },
       status: 'scheduled'
     });
 
-    // Fetch tasks assigned to the user
-    const tasks = await taskModel.find({
-      assignedTo: userId,
-    
-    });
+    const tasks = await taskModel.find({ assignedTo: userId });
+    const payrollData = await Payroll.find({ employee: userId });
+    const leaveRequests = await Leave.find({ userId });
 
-    // Fetch payroll data for the user
-    const payrollData = await Payroll.find({
-      employee: userId
-    });
-
-    // Fetch leave requests for the user
-    const leaveRequests = await Leave.find({
-      userId: userId
-    });
-
-    // Send the aggregated data as the response
     res.status(200).json({
       upcomingMeetings,
       tasks,
@@ -151,14 +140,12 @@ export const dashboardData = async (req: Request, res: Response): Promise<void> 
       leaveRequests
     });
 
-
-    
-    
   } catch (error) {
     console.error('Error fetching dashboard data:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
 
 export const employeedetails = async(req:Request,res:Response):Promise<void>=>{
   try {

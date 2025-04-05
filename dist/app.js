@@ -81,10 +81,10 @@ io.on('connection', (socket) => {
     // When a user connects, join them to a room based on their user ID
     socket.on('register', (userId) => {
         socket.join(userId);
-        console.log(`User ${userId} joined room ${userId}`);
+        // console.log(`User ${userId} joined room ${userId}`);
     });
     socket.on('message', (data) => __awaiter(void 0, void 0, void 0, function* () {
-        console.log('message from client', data);
+        // console.log('message from client', data);
         const newMessage = new chatModel_1.default({
             sender: data.sender,
             receiver: data.receiver,
@@ -108,7 +108,7 @@ io.on('connection', (socket) => {
     }));
     socket.on('initiate-video-call', ({ senderId, receiverId, roomId }) => {
         4;
-        console.log(`Initiating video call from ${senderId} to ${receiverId}`);
+        // console.log(`Initiating video call from ${senderId} to ${receiverId}`);
         io.to(receiverId).emit('video-call-notification', { senderId, roomId });
     });
     socket.on('initiate-video-call', ({ senderId, receiverId, roomId }) => {
@@ -126,7 +126,7 @@ io.on('connection', (socket) => {
         }
     }));
     socket.on('disconnect', () => {
-        console.log('user disconnected', socket.id);
+        // console.log('user disconnected', socket.id);
     });
 });
 mongoose_1.default.connect(process.env.MONGO_URI, {

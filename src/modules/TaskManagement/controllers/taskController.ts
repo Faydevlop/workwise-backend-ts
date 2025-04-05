@@ -6,6 +6,7 @@ import User from "../../employee/models/userModel";
 import taskModel from "../models/taskModel";
 import { deleteDepartment } from "../../Department/controllers/departmentController";
 import mongoose from "mongoose";
+import { AuthenticatedRequest } from "../../../middlewares/jwtMiddleware";
 
 
 export const CreateTask = async(req:Request,res:Response):Promise<void>=>{
@@ -144,7 +145,7 @@ export const taskdetails = async(req:Request,res:Response):Promise<void>=>{
     }
 }
 
-export const listTasks = async(req:Request,res:Response):Promise<void>=>{
+export const listTasks = async(req:AuthenticatedRequest,res:Response):Promise<void>=>{
     try {
         const {employeeId} = req.params;
 

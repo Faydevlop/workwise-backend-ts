@@ -18,8 +18,7 @@ const transporter = nodemailer.createTransport({
 });
 
 export const createLeave = async (req: Request, res: Response) => {
-  console.log('1');
-  
+
   try {
     const { userId, leaveType, startDate, endDate, reason } = req.body;
 

@@ -118,7 +118,7 @@ export const referJob = async (req: Request, res: Response): Promise<void> => {
     try {
       const { name, email, phone, address, qualifications, portfolio, referer,jobId } = req.body;
       const resumeUrl = (req.file as any)?.path; // Cloudinary file URL
-  
+        
       console.log('Resume URL:', resumeUrl);
   
       // Create a new job referral entry in the database
@@ -263,3 +263,5 @@ export const referJob = async (req: Request, res: Response): Promise<void> => {
         res.status(500).json({ message: 'Internal server error' });
     }
   }
+
+ 
