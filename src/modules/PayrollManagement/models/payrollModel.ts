@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 // Define the interface for the Payroll document
 interface IPayroll extends Document {
-  employee: mongoose.Schema.Types.ObjectId;
+  employee: mongoose.Schema.Types.ObjectId | string;
   payPeriodStart: Date;
   payPeriodEnd: Date;
   payPeriod: string;
@@ -10,7 +10,7 @@ interface IPayroll extends Document {
   bonuses: number;
   totalAmount: number;
   deductions: number;
-  paymentStatus: 'Pending' | 'Paid' | 'Overdue';
+  paymentStatus: any
   paymentMethod: string;
   permonthsalary:number;
 }

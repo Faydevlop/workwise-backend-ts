@@ -1,17 +1,10 @@
 import { Request, Response } from "express";
-import project from "../models/projectModel";
-import User from "../../employee/models/userModel";
-import mongoose from "mongoose";
-import Department from "../../Department/model/departmentModel";
-import taskModel from "../../TaskManagement/models/taskModel";
-import projectModel from "../models/projectModel";
+import * as projectService from "../serviecs/projectService";
 
 export const addNewProject = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  
-
   const {
     name,
     status,
@@ -20,54 +13,20 @@ export const addNewProject = async (
     priority,
     description,
     sdepartment,
- 
   } = req.body;
-console.log(name,
-  status,
-  startDate,
-  endDate,
-  priority,
-  description,
-  sdepartment,);
 
-
-  
+  console.log(name, status, startDate, endDate, priority, description, sdepartment);
 
   try {
-    console.log('11');
-    const existProject = await projectModel.findOne({name:name});
-    console.log(existProject);
-    
-    console.log('12');
-
-    if(existProject){
-      res.status(400).json({message:'Duplicate Project is Found'})
-      console.log('123');
-      return
-    }
-    console.log('1');
-    
-
-
-    const newProject = new project({
-      name,
-      status,
-      startDate,
-      endDate,
-      priority,
-      description,
-      department: sdepartment || undefined,
-   
-    });
-    console.log('2');
-
-    await newProject.save();
-
-    res.status(201).json({ message: "Project created successfully" });
-    console.log('3');
+    const result = await projectService.createProject(req.body);
+    res.status(201).json(result);
   } catch (error) {
     console.error("Error creating project:", error);
-    res.status(500).json({ message: "Error creating project" });
+    if (error instanceof Error && error.message === 'Duplicate Project is Found') {
+      res.status(400).json({ message: error.message });
+    } else {
+      res.status(500).json({ message: "Error creating project" });
+    }
   }
 };
 
@@ -76,14 +35,7 @@ export const listProjects = async (
   res: Response
 ): Promise<void> => {
   try {
-    const projects = await project.find()
-   
-    
-    if (!projects) {
-      res.status(400).json({ message: "No Project Found" });
-      return;
-    }
-
+    const projects = await projectService.getAllProjects();
     res.status(200).json(projects);
   } catch (error) {
     res.status(400).json({ message: "Error fetching projects" });
@@ -96,15 +48,11 @@ export const getprojectdetails = async (
 ): Promise<void> => {
   try {
     const { projectId } = req.params;
-    const projectdetails = await project.findById(projectId).populate('department')
-     
-
-    if (!projectdetails) {
-      res.status(400).json({ message: "project details not found" });
-      return;
-    }
-    res.status(200).json(projectdetails);
-  } catch (error) {}
+    const projectDetails = await projectService.getProjectById(projectId);
+    res.status(200).json(projectDetails);
+  } catch (error) {
+    res.status(400).json({ message: error instanceof Error ? error.message : "Error fetching project details" });
+  }
 };
 
 export const editProject = async (
@@ -112,107 +60,60 @@ export const editProject = async (
   res: Response
 ): Promise<void> => {
   const { projectId } = req.params;
-  const {
-    name,
-    status,
-    startDate,
-    endDate,
-    priority,
-    description,
-    sdepartment
-  } = req.body;
-
+  
   try {
-    const projectdetails = await project.findById(projectId);
-    if (!projectdetails) {
-      res.status(400).json({ message: "Project not found" });
-      return;
-    }
-
-    projectdetails.name = name;
-    projectdetails.status = status;
-    projectdetails.startDate = startDate;
-    projectdetails.endDate = endDate;
-    projectdetails.priority = priority;
-    projectdetails.description = description;
-    projectdetails.department = sdepartment;
-
-    // projectdetails.teamLead = teamLead;
-    // projectdetails.teamMates = teamMates;
-
-    await projectdetails.save();
-
-    res.status(200).json({ message: "Project updated successfully" });
+    const result = await projectService.updateProject(projectId, req.body);
+    res.status(200).json(result);
   } catch (error) {
     console.error("Error updating project:", error);
-    res.status(500).json({ error: "Server error" });
+    res.status(error instanceof Error && error.message === "Project not found" ? 400 : 500)
+      .json({ message: error instanceof Error ? error.message : "Server error" });
   }
 };
 
-export const deleteProject = async (req:Request,res:Response):Promise<void> =>{
-            const {projectId} = req.params;
-            console.log('delete project request is here',projectId);
-            
-            try {
-              const projectdetails = await project.findById(projectId);
-              if(!projectdetails){
-                res.status(400).json({message:'Project not found'});
-                return
-              }
-
-        
-
-              await project.findByIdAndDelete(projectId);
-
-              res.status(200).json({message:'Project deleted successfully'});
-              
-            } catch (error) {
-              console.error('Error deleting project:', error);
-              res.status(500).json({ message: 'Server error' });
-            }
-}
-
-export const projectlisting = async(req:Request,res:Response):Promise<void>=>{
+export const deleteProject = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const { projectId } = req.params;
+  console.log('delete project request is here', projectId);
+  
   try {
-    const {managerId} = req.params;
-    const department = await Department.findOne({headOfDepartMent:managerId});
-    if(!department){
-      res.status(400).json({message:'Department Not found'});
-      return
-    }
-    const projectDetails = await project.find({department:department._id}).populate('department')
-
-    if(!projectDetails){
-      res.status(400).json({message:'project details not found'});
-      return
-    }
-
-    // Fetch tasks for each project
-    const projectIds = projectDetails.map(p => p._id);
-    const tasks = await taskModel.find({ projectId: { $in: projectIds } }).populate('projectId')
-
-    res.status(200).json({projectDetails,tasks});
-    
+    const result = await projectService.removeProject(projectId);
+    res.status(200).json(result);
   } catch (error) {
-    res.status(500).json({ error: "Server error" });
+    console.error('Error deleting project:', error);
+    res.status(error instanceof Error && error.message === "Project not found" ? 400 : 500)
+      .json({ message: error instanceof Error ? error.message : "Server error" });
   }
-}
+};
 
-export const listTasks = async (req:Request,res:Response):Promise<void>=>{
+export const projectlisting = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
-
-    const {projectId} = req.params;
-
-    const tasks = await taskModel.find({projectId:projectId})
-
-    if(!tasks){
-      res.status(400).json({message:'no tasks found'})
-      return
-    }
-    
-    res.status(200).json({tasks})
+    const { managerId } = req.params;
+    const result = await projectService.getProjectsByManager(managerId);
+    res.status(200).json(result);
   } catch (error) {
-    res.status(500).json({ error: "Server error" });
+    res.status(error instanceof Error && 
+      (error.message === "Department Not found" || error.message === "Project details not found") 
+      ? 400 : 500)
+      .json({ message: error instanceof Error ? error.message : "Server error" });
   }
-}
+};
 
+export const listTasks = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { projectId } = req.params;
+    const result = await projectService.getTasksByProject(projectId);
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(error instanceof Error && error.message === "No tasks found" ? 400 : 500)
+      .json({ message: error instanceof Error ? error.message : "Server error" });
+  }
+};

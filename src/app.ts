@@ -85,6 +85,11 @@ io.on('connection', (socket) => {
   socket.on('register', (userId) => {
     socket.join(userId);
     // console.log(`User ${userId} joined room ${userId}`);
+
+    // >>>>>>> IMPORTANT ADDITION START <<<<<<<
+    // Store the userId directly on the socket object for easy access on disconnect
+    socket.data.userId = userId;
+    // >>>>>>> IMPORTANT ADDITION END <<<<<<<
   });
 
   socket.on('message', async (data) => {
@@ -94,12 +99,12 @@ io.on('connection', (socket) => {
       sender: data.sender,
       receiver: data.receiver,
       content: data.content,
-      messageStatus:data.messageStatus,
+      messageStatus: data.messageStatus,
       timestamp: new Date(),
     });
 
     await newMessage.save();
-    
+
     // Send the message to the recipient's room
     io.to(data.receiver).emit('message', data);
 
@@ -110,8 +115,6 @@ io.on('connection', (socket) => {
       receiver: data.receiver,
     };
 
-
-
     io.to(data.sender).emit('update-last-message', lastMessage);
     io.to(data.receiver).emit('update-last-message', lastMessage);
 
@@ -119,24 +122,26 @@ io.on('connection', (socket) => {
     socket.emit('message', data);
   });
 
-  socket.on('initiate-video-call', ({ senderId, receiverId, roomId }) => {4
+  socket.on('initiate-video-call', ({ senderId, receiverId, roomId }) => {
     // console.log(`Initiating video call from ${senderId} to ${receiverId}`);
     io.to(receiverId).emit('video-call-notification', { senderId, roomId });
-});
+  });
 
-socket.on('initiate-video-call', ({ senderId, receiverId, roomId }) => {
-  io.to(receiverId).emit('video-call-initiate', { senderId, roomId });
-});
+  socket.on('initiate-video-call', ({ senderId, receiverId, roomId }) => {
+    io.to(receiverId).emit('video-call-initiate', { senderId, roomId });
+  });
 
   socket.on('message-seen', async ({ senderId, receiverId }) => {
     try {
       // Update all messages from the sender to the receiver as seen
       await Message.updateMany(
+        // The third argument to updateMany is the options object, not another update object.
+        // You were trying to set messageStatus: 'seen' as an option before.
+        // It should be combined into the $set object.
         { sender: senderId, receiver: receiverId, messageStatus: 'delivered' },
-        { $set: { seen: true } },
-        { $set: { messageStatus: 'seen' } }
+        { $set: { seen: true, messageStatus: 'seen' } } // Combine updates here
       );
-  
+
       // Notify the sender that their messages have been seen
       io.to(senderId).emit('messages-seen', { senderId, receiverId });
     } catch (error) {
@@ -144,9 +149,27 @@ socket.on('initiate-video-call', ({ senderId, receiverId, roomId }) => {
     }
   });
 
-  socket.on('disconnect', () => {
-    // console.log('user disconnected', socket.id);
+  // >>>>>>> CODE TO UPDATE STARTS HERE <<<<<<<
+  socket.on('disconnect', async () => {
+    const userId = socket.data.userId; // Retrieve the userId stored during 'register'
+    // console.log('user disconnected', socket.id); // You can keep this for debugging
+
+    if (userId) {
+      console.log(`User ${userId} disconnected. Updating message statuses.`);
+      try {
+        // Update messages that this user (who just disconnected) received
+        // and had previously marked as 'seen', back to 'delivered' and seen: false
+        await Message.updateMany(
+          { receiver: userId, messageStatus: 'seen' }, // Query: Find messages received by this user that are 'seen'
+          { $set: { messageStatus: 'delivered', seen: false } } // Update: Set status to 'delivered' and seen to false
+        );
+        console.log(`Messages for disconnected user ${userId} updated to 'delivered'.`);
+      } catch (error) {
+        console.error('Error updating message status on disconnect:', error);
+      }
+    }
   });
+  // >>>>>>> CODE TO UPDATE ENDS HERE <<<<<<<
 });
 
 
