@@ -17,12 +17,13 @@ export const employeeLogin = async (
       const { accessToken, refreshToken, user } = await loginService(email, password);
       
       // Set refresh token in HTTP-only cookie
-      res.cookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      });
+    res.cookie('refreshToken', refreshToken, {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+});
+
       
       res.status(200).json({ accessToken, user });
     } catch (serviceError: any) {
@@ -40,11 +41,12 @@ export const employeeLogout = async (req: Request, res: Response): Promise<void>
   try {
     const result = await logoutService();
     
-    res.clearCookie("refreshToken", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-    });
+   res.clearCookie("refreshToken", {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"
+});
+
     
     res.status(200).json(result);
   } catch (error) {
