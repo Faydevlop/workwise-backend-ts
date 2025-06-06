@@ -1,18 +1,5 @@
 import mongoose, { Document, Schema } from "mongoose";
-
-interface ITasks extends Document{
-    projectId:mongoose.Schema.Types.ObjectId;
-    name:string;
-    description:string;
-    status:string;
-    dueDate:Date;
-    assignedTo:mongoose.Schema.Types.ObjectId[] | null ;
-    createdAt:Date;
-    comments:mongoose.Schema.Types.ObjectId[] | null;
-    priority:string;
-    cat:String;
-    attachments:String
-}
+import { ITasks } from "../types/tasksTypes";
 
 const TaskSchema: Schema = new Schema({
     projectId:{ type: Schema.Types.ObjectId, ref: "Project", required: true },

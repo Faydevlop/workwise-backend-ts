@@ -1,23 +1,5 @@
 import mongoose, { Document, model, Schema } from "mongoose";
-
-// defining interface for user
-interface IUser extends Document {
-  firstName: string;
-  lastName: string;
-  email: string;
-  dob: Date;
-  phone: number;
-  gender: string;
-  address: string;
-  department: mongoose.Schema.Types.ObjectId | null;
-  position: string;
-  dateOfJoining: Date;
-  payroll: mongoose.Schema.Types.ObjectId | null;
-  employeeStatus: string;
-  password: string;
-  profileImageUrl: string;
-  projectAssigned: boolean;
-}
+import { IUser } from "../types/userModelTypes";
 
 const UserSchema = new Schema<IUser>({
   firstName: { type: String, required: true },

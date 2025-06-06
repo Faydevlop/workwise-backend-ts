@@ -1,11 +1,5 @@
 import mongoose, { Document, Schema } from "mongoose";
-
-interface IComments extends Document{
-    commentedBy:mongoose.Schema.Types.ObjectId;
-    comment:string;
-    timestamp:Date
-    taskId:mongoose.Schema.Types.ObjectId;
-}
+import { IComments } from "../types/commentsTypes";
 
 const TaskSchema: Schema = new Schema({
     commentedBy:{ type: Schema.Types.ObjectId, ref: "User", required: true },

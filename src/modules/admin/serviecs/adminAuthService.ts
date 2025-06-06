@@ -2,17 +2,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import Admin from "../models/adminModel";
 import { generateAccessToken } from '../../../middlewares/jwt';
-
-interface AdminSignupData {
-  username: string;
-  email: string;
-  password: string;
-}
-
-interface AdminLoginData {
-  email: string;
-  password: string;
-}
+import { AdminSignupData, AdminLoginData } from '../types/adminTypes';
 
 export const createAdmin = async (adminData: AdminSignupData) => {
   const { username, email, password } = adminData;

@@ -6,14 +6,7 @@ import projectModel from "../../admin/models/projectModel";
 import Leave from "../../leaveManagement/models/leaveModel";
 import { Meeting } from "../../meetings/model/MeetingModal";
 import taskModel from "../../TaskManagement/models/taskModel";
-
-export interface LoginResult {
-  success: boolean;
-  message?: string;
-  accessToken?: string;
-  refreshToken?: string;
-  manager?: any;
-}
+import { LoginResult } from "../types/managerAuthTypes";
 
 export const authenticateManager = async (email: string, password: string): Promise<LoginResult> => {
   const user = await User.findOne({ email: email });

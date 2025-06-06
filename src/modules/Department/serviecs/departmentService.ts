@@ -3,15 +3,7 @@ import mongoose, { Types } from "mongoose";
 import User from "../../employee/models/userModel";
 import Department from "../model/departmentModel";
 import Project from '../../admin/models/projectModel';
-
-interface DepartmentData {
-  departmentName: string;
-  headOfDepartment: mongoose.Types.ObjectId | string | null;
-  description: string;
-  email: string;
-  phone: number;
-  teamMembers: string[] | Types.ObjectId[];
-}
+import { DepartmentData } from '../types/departmentModelTypes';
 
 export const findNonDepartmentEmployees = async () => {
   const users = await User.find({ department: null, position: 'Employee' });

@@ -1,19 +1,5 @@
 import mongoose, { Document, model, Schema } from 'mongoose';
-
-// Define the ILeave interface extending the Mongoose Document interface
-interface ILeave extends Document {
-    userId: mongoose.Schema.Types.ObjectId;
-  leaveType: string;
-  startDate: Date;
-  endDate: Date;
-  status: string;
-  reason: string;
-  createdAt: Date;
-  monthlyLeaveCount:number;
-  lastResetDate:Date;
-  comment:string;
-  isChanged:boolean;
-}
+import { ILeave } from '../types/leave.d';
 
 // Create the Leave schema
 const LeaveSchema: Schema<ILeave> = new Schema({

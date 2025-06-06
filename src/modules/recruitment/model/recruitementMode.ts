@@ -1,23 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
-
-interface IJob extends Document {
-  jobTitle: string;
-  role: string;
-  department: string;
-  jobDescription: string;
-  requirements: string;
-  responsibilities: string;
-  location: string;
-  employmentType: string;
-  salaryRange: string;
-  applicationProcess: string;
-  contactEmail: string;
-  contactPhone: string;
-  applicationDeadline: Date;
-  eligibilityCriteria: string;
-  additionalNotes?: string;
-
-}
+import { IJob } from '../types/jobModelTypes';
 
 const JobSchema: Schema = new Schema({
   jobTitle: { type: String, required: true },
