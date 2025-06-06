@@ -71,9 +71,10 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 });
 
 const io = new Server(server, {
-  cors: {
-    origin: '*', // Should match your frontend's origin
-    methods: ['GET', 'POST']
+ cors: {
+    origin: ['http://localhost:5173', 'https://workwise-seven.vercel.app'],
+    methods: ['GET', 'POST'],
+    credentials: true
   }
 })
 export { io };
