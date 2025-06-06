@@ -37,6 +37,11 @@ app.use(cors({
   credentials: true
 }));
 
+app.options('*', cors({
+  origin: ['http://localhost:5173', 'https://workwise-seven.vercel.app'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
+}));
 
 app.use(cookieParser());
 
