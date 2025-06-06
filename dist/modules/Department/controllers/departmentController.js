@@ -1,4 +1,27 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -8,39 +31,26 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteUser = exports.editDetails = exports.listDetails = exports.deleteDepartment = exports.showDepartments = exports.addDepartment = exports.listManager = exports.listNonDepartmentempo = void 0;
-const userModel_1 = __importDefault(require("../../employee/models/userModel"));
-const departmentModel_1 = __importDefault(require("../model/departmentModel"));
-const projectModel_1 = __importDefault(require("../../admin/models/projectModel"));
+const departmentService = __importStar(require("../serviecs/departmentService"));
 const listNonDepartmentempo = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('req is here 1');
     try {
-        const users = yield userModel_1.default.find({ department: null, position: 'Employee' });
-        if (!users) {
-            res.status(400).json({ message: 'Users not found without department' });
-            return;
-        }
+        const users = yield departmentService.findNonDepartmentEmployees();
         console.log('req is here 2');
         console.log(users.length);
         res.status(200).json(users);
     }
     catch (error) {
         console.log(error);
-        res.status(500).json({ message: 'error fetching users with not department' });
+        res.status(500).json({ message: 'Error fetching users with no department' });
     }
 });
 exports.listNonDepartmentempo = listNonDepartmentempo;
 const listManager = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const admins = yield userModel_1.default.find({ department: null, position: 'Manager' });
-        if (!admins) {
-            res.status(400).json({ message: 'admins not found' });
-            return;
-        }
+        const admins = yield departmentService.findManagers();
         res.status(200).json(admins);
     }
     catch (error) {
@@ -50,21 +60,8 @@ const listManager = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 });
 exports.listManager = listManager;
 const addDepartment = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { departmentName, headOfDepartment, description, email, phone, teamMembers } = req.body;
     try {
-        // Create a new department
-        const newDepartment = new departmentModel_1.default({
-            departmentName,
-            headOfDepartMent: headOfDepartment === 'null' ? null : headOfDepartment,
-            description,
-            email,
-            phone,
-            TeamMembers: teamMembers,
-        });
-        // Save the department to the database
-        const savedDepartment = yield newDepartment.save();
-        yield userModel_1.default.updateOne({ _id: headOfDepartment }, { $set: { department: savedDepartment._id } });
-        yield userModel_1.default.updateMany({ _id: { $in: teamMembers } }, { $set: { department: savedDepartment._id } });
+        const savedDepartment = yield departmentService.createDepartment(req.body);
         res.status(201).json(savedDepartment);
     }
     catch (error) {
@@ -75,11 +72,7 @@ const addDepartment = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 exports.addDepartment = addDepartment;
 const showDepartments = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const departments = yield departmentModel_1.default.find().populate('headOfDepartMent');
-        if (!departments) {
-            res.status(400).json({ message: 'department not found' });
-            return;
-        }
+        const departments = yield departmentService.getAllDepartments();
         res.status(200).json(departments);
     }
     catch (error) {
@@ -91,15 +84,8 @@ exports.showDepartments = showDepartments;
 const deleteDepartment = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { departmentId } = req.params;
-        const deletedDeparment = yield departmentModel_1.default.findById(departmentId);
-        if (!deletedDeparment) {
-            res.status(404).json({ message: 'Department not found' });
-            return;
-        }
-        yield userModel_1.default.updateOne({ _id: deletedDeparment.headOfDepartMent }, { $set: { department: null } });
-        yield userModel_1.default.updateMany({ _id: { $in: deletedDeparment.TeamMembers } }, { $set: { department: null } });
-        yield departmentModel_1.default.findByIdAndDelete(departmentId);
-        res.status(200).json({ message: 'Department deleted successfully' });
+        const result = yield departmentService.removeDepartment(departmentId);
+        res.status(200).json(result);
     }
     catch (error) {
         res.status(500).json({ message: 'Server error' });
@@ -109,15 +95,8 @@ exports.deleteDepartment = deleteDepartment;
 const listDetails = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { departmentId } = req.params;
-        const departmentDetails = yield departmentModel_1.default.findById(departmentId)
-            .populate('headOfDepartMent')
-            .populate('TeamMembers');
-        if (!departmentDetails) {
-            res.status(400).json({ message: 'Department NOt Found' });
-            return;
-        }
-        const projectDetails = yield projectModel_1.default.find({ department: departmentId });
-        res.status(200).json({ department: departmentDetails, projects: projectDetails });
+        const details = yield departmentService.getDepartmentDetails(departmentId);
+        res.status(200).json(details);
     }
     catch (error) {
         res.status(500).json({ message: 'Server error' });
@@ -126,22 +105,9 @@ const listDetails = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 exports.listDetails = listDetails;
 const editDetails = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { departmentId } = req.params;
-    const { departmentName, headOfDepartment, description, email, phone, teamMembers } = req.body;
     try {
-        const departmentDetails = yield departmentModel_1.default.findById(departmentId);
-        if (!departmentDetails) {
-            res.status(400).json({ message: 'department is not found' });
-            return;
-        }
-        departmentDetails.departmentName = departmentName;
-        departmentDetails.headOfDepartMent = headOfDepartment;
-        departmentDetails.description = description;
-        departmentDetails.email = email;
-        departmentDetails.phone = phone;
-        departmentDetails.TeamMembers = teamMembers;
-        yield userModel_1.default.updateMany({ _id: { $in: teamMembers } }, { $set: { department: departmentId } });
-        yield departmentDetails.save();
-        res.status(200).json({ message: 'department Updated success' });
+        const result = yield departmentService.updateDepartmentDetails(departmentId, req.body);
+        res.status(200).json(result);
     }
     catch (error) {
         res.status(500).json({ error: "Server error" });
@@ -154,25 +120,11 @@ const deleteUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     const { teamMemberIds } = req.body;
     console.log(teamMemberIds, departmentId);
     try {
-        const departmentDetails = yield departmentModel_1.default.findById(departmentId);
-        if (!departmentDetails) {
-            res.status(200).json({ message: 'department is not working' });
-            return;
-        }
-        const memberIndex = departmentDetails.TeamMembers.indexOf(teamMemberIds);
-        if (memberIndex === -1) {
-            res.status(404).json({ message: 'Team member not found in this department' });
-            return;
-        }
-        // Remove the team member from the array
-        departmentDetails.TeamMembers.splice(memberIndex, 1);
-        // Save the updated department details
-        yield departmentDetails.save();
-        // Optionally, update the user to remove the department association if needed
-        yield userModel_1.default.findByIdAndUpdate(teamMemberIds, { $unset: { department: null } }, { new: true });
-        res.status(200).json({ message: 'Team member removed successfully', departmentDetails });
+        const result = yield departmentService.removeTeamMember(departmentId, teamMemberIds);
+        res.status(200).json(result);
     }
     catch (error) {
+        res.status(500).json({ message: 'Server error' });
     }
 });
 exports.deleteUser = deleteUser;

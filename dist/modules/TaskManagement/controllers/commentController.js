@@ -13,40 +13,27 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.updatestatus = exports.listComments = exports.createComment = void 0;
-const commentsModel_1 = __importDefault(require("../models/commentsModel"));
-const taskModel_1 = __importDefault(require("../models/taskModel"));
+const commentService_1 = __importDefault(require("../services/commentService"));
 const createComment = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { taskId } = req.params;
     const { commentedBy, comment } = req.body;
     try {
-        if (!commentedBy || !comment) {
-            res.status(400).json({ message: "Please fill all the forms" });
-            return;
-        }
-        const newComment = new commentsModel_1.default({
-            commentedBy: commentedBy,
-            comment: comment,
-            taskId: taskId
-        });
-        yield newComment.save();
-        res.status(200).json({ message: 'Comment Added Succesfull' });
+        const result = yield commentService_1.default.createComment(commentedBy, comment, taskId);
+        res.status(200).json(result);
     }
     catch (error) {
+        res.status(400).json({ message: error.message });
     }
 });
 exports.createComment = createComment;
 const listComments = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { taskId } = req.params;
     try {
-        const comments = yield commentsModel_1.default.find({ taskId: taskId })
-            .populate('commentedBy');
-        if (!comments) {
-            res.status(400).json({ message: 'No Comments' });
-            return;
-        }
-        res.status(200).json({ comments });
+        const result = yield commentService_1.default.listComments(taskId);
+        res.status(200).json(result);
     }
     catch (error) {
+        res.status(400).json({ message: error.message });
     }
 });
 exports.listComments = listComments;
@@ -54,28 +41,20 @@ const updatestatus = (req, res) => __awaiter(void 0, void 0, void 0, function* (
     try {
         const { id } = req.params;
         const { status } = req.body;
-        try {
-            // Validate input
-            if (!status || !['Pending', 'InProgress', 'Completed'].includes(status)) {
-                res.status(400).json({ message: 'Invalid status' });
-                return;
-            }
-            // Update the task status
-            const updatedTask = yield taskModel_1.default.findByIdAndUpdate(id, { status }, { new: true } // Return the updated task
-            );
-            if (!updatedTask) {
-                res.status(404).json({ message: 'Task not found' });
-                return;
-            }
-            // Send the updated task back to the client
-            res.status(200).json(updatedTask);
-        }
-        catch (error) {
-            console.error('Error updating task status:', error);
-            res.status(500).json({ message: 'Server error' });
-        }
+        const updatedTask = yield commentService_1.default.updateTaskStatus(id, status);
+        res.status(200).json(updatedTask);
     }
     catch (error) {
+        console.error('Error updating task status:', error);
+        if (error.message === 'Invalid status') {
+            res.status(400).json({ message: error.message });
+        }
+        else if (error.message === 'Task not found') {
+            res.status(404).json({ message: error.message });
+        }
+        else {
+            res.status(500).json({ message: 'Server error' });
+        }
     }
 });
 exports.updatestatus = updatestatus;

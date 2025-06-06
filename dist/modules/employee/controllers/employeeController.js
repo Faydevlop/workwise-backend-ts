@@ -1,4 +1,27 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -8,100 +31,50 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.setNewEmail = exports.resetEmail = exports.employeedetails = exports.dashboardData = exports.ChangePassword = exports.resetPassRequest = exports.updateProfile = void 0;
-const userModel_1 = __importDefault(require("../models/userModel"));
-const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const resetPass_1 = __importDefault(require("../middlewares/resetPass"));
-const bcrypt_1 = __importDefault(require("bcrypt"));
-const MeetingModal_1 = require("../../meetings/model/MeetingModal");
-const taskModel_1 = __importDefault(require("../../TaskManagement/models/taskModel"));
-const payrollModel_1 = __importDefault(require("../../PayrollManagement/models/payrollModel"));
-const leaveModel_1 = __importDefault(require("../../leaveManagement/models/leaveModel"));
-const nodemailer_1 = __importDefault(require("nodemailer"));
-const transporter = nodemailer_1.default.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL,
-        pass: process.env.EMAILPASS,
-    },
-});
+const employeeService = __importStar(require("../serviecs/employeeService"));
 const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         const { userId } = req.params;
-        const user = yield userModel_1.default.findById(userId);
-        if (!user) {
-            res.status(404).json({ message: "User not found" });
-            return;
-        }
-        // Update user fields
-        user.firstName = req.body.firstName || user.firstName;
-        user.lastName = req.body.lastName || user.lastName;
-        user.email = req.body.email || user.email;
-        user.dob = req.body.dob || user.dob;
-        user.phone = req.body.phone || user.phone;
-        user.gender = req.body.gender || user.gender;
-        user.address = req.body.address || user.address;
-        // Update profile image if it exists
-        if (req.file) {
-            // Cloudinary will have already handled the upload at this point
-            // The URL of the uploaded image is available in `req.file.path` (after multer processes it)
-            const uploadedImageUrl = req.file.path;
-            // Save the Cloudinary URL to the user's profile image field
-            user.profileImageUrl = uploadedImageUrl;
-        }
-        const updatedUser = yield user.save();
+        const profileImageUrl = (_a = req.file) === null || _a === void 0 ? void 0 : _a.path;
+        const updatedUser = yield employeeService.updateProfileService(userId, req.body, profileImageUrl);
         res.status(200).json(updatedUser);
     }
     catch (error) {
-        res.status(500).json({ message: "Server error", error });
+        console.error("Error updating profile:", error);
+        res.status(error.message === "User not found" ? 404 : 500).json({
+            message: error.message || "Server error"
+        });
     }
 });
 exports.updateProfile = updateProfile;
 const resetPassRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { userId } = req.params;
-        const existUser = yield userModel_1.default.findById(userId);
-        if (!existUser) {
-            res.status(401).json({ message: "User Not Found" });
-            return;
-        }
-        const token = jsonwebtoken_1.default.sign({ userId: existUser._id }, process.env.JWT_SECRET, {
-            expiresIn: "1d",
-        });
-        const resetLink = `${process.env.FRONTENDAPI}/employee/reset-password?token=${token}`;
-        yield (0, resetPass_1.default)(existUser.email, resetLink);
-        res.status(201).json({ message: "Verification Link sent Success" });
+        const result = yield employeeService.resetPassRequestService(userId);
+        res.status(201).json(result);
     }
     catch (error) {
         console.error("Error sending verification email:", error);
-        res.status(500).json({ message: "Server error" });
+        res.status(error.message === "User Not Found" ? 401 : 500).json({
+            message: error.message || "Server error"
+        });
     }
 });
 exports.resetPassRequest = resetPassRequest;
 const ChangePassword = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { token, password } = req.body;
-        if (!token || !password) {
-            return res.status(400).json({ message: "invalid request" });
-        }
-        const decode = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
-        const userId = decode.userId;
-        const user = yield userModel_1.default.findById(userId);
-        if (!user) {
-            return res.status(400).json({ message: "User not found" });
-        }
-        const salt = yield bcrypt_1.default.genSalt(10);
-        const hashedPassword = yield bcrypt_1.default.hash(password, salt);
-        user.password = hashedPassword;
-        yield user.save();
-        res.status(200).json({ message: "Password has been reset successfully" });
+        const result = yield employeeService.changePasswordService(token, password);
+        res.status(200).json(result);
     }
     catch (error) {
         console.error("Error resetting password:", error);
+        if (error.message === "Invalid request" || error.message === "User not found") {
+            return res.status(400).json({ message: error.message });
+        }
         res.status(500).json({ message: "Server error" });
     }
 });
@@ -114,86 +87,44 @@ const dashboardData = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             res.status(401).json({ message: "Unauthorized" });
             return;
         }
-        const upcomingMeetings = yield MeetingModal_1.Meeting.find({
-            participants: userId,
-            date: { $gte: new Date() },
-            status: 'scheduled'
-        });
-        const tasks = yield taskModel_1.default.find({ assignedTo: userId });
-        const payrollData = yield payrollModel_1.default.find({ employee: userId });
-        const leaveRequests = yield leaveModel_1.default.find({ userId });
-        res.status(200).json({
-            upcomingMeetings,
-            tasks,
-            payrollData,
-            leaveRequests
-        });
+        const data = yield employeeService.dashboardDataService(userId);
+        res.status(200).json(data);
     }
     catch (error) {
         console.error('Error fetching dashboard data:', error);
-        res.status(500).json({ message: 'Internal server error' });
+        res.status(error.message === "Unauthorized" ? 401 : 500).json({
+            message: error.message || "Internal server error"
+        });
     }
 });
 exports.dashboardData = dashboardData;
 const employeedetails = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { userId } = req.params;
-        const userdata = yield userModel_1.default.findById(userId);
-        if (!userdata) {
-            res.status(400).json({ message: 'User Not Found' });
-            return;
-        }
-        res.status(200).json({ userdata });
+        const data = yield employeeService.employeeDetailsService(userId);
+        res.status(200).json(data);
     }
     catch (error) {
-        res.status(500).json({ message: 'Internal server error' });
+        console.error('Error fetching employee details:', error);
+        res.status(error.message === "User Not Found" ? 400 : 500).json({
+            message: error.message || "Internal server error"
+        });
     }
 });
 exports.employeedetails = employeedetails;
-function generateOtp() {
-    // Generate a random 6-digit number between 100000 and 999999
-    const otp = Math.floor(100000 + Math.random() * 900000);
-    return otp.toString(); // Convert to string if needed
-}
 const resetEmail = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { userId } = req.params;
         const { newEmail } = req.body;
-        const oldUserdata = yield userModel_1.default.findOne({ email: newEmail });
-        if (oldUserdata) {
-            res.status(400).json({ message: 'The email is already taken' });
-            return;
-        }
-        const userData = yield userModel_1.default.findById(userId);
-        if (!userData) {
-            res.status(400).json({ message: 'User Not found' });
-            return;
-        }
-        const otp = generateOtp();
-        // Send email notification
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: newEmail, // Change this to the recipient's email
-            subject: `OTP - Email Change ${userData.email}`,
-            text: `
-  
-  
-  Your email resent OTP is : ${otp}
-  
-  
-  `
-        };
-        transporter.sendMail(mailOptions, (error, info) => {
-            if (error) {
-                console.log('Error sending email:', error);
-            }
-            else {
-                console.log('Email sent: ' + info.response);
-            }
-        });
-        res.status(200).json({ otp });
+        const result = yield employeeService.resetEmailService(userId, newEmail);
+        res.status(200).json(result);
     }
     catch (error) {
+        console.error('Error resetting email:', error);
+        if (error.message === "The email is already taken" || error.message === "User Not found") {
+            res.status(400).json({ message: error.message });
+            return;
+        }
         res.status(500).json({ message: 'Internal server error' });
     }
 });
@@ -202,19 +133,15 @@ const setNewEmail = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     try {
         const { userId } = req.params;
         const { newEmail } = req.body;
-        const existEmail = yield userModel_1.default.findOne({ email: newEmail });
-        if (existEmail) {
-            res.status(400).json({ message: 'The Email is already taken' });
-            return;
-        }
-        const userData = yield userModel_1.default.findByIdAndUpdate(userId, { email: newEmail }, { new: true });
-        if (!userData) {
-            res.status(400).json({ message: 'User Not Found' });
-            return;
-        }
-        res.status(200).json({ message: 'User email Updated success' });
+        const result = yield employeeService.setNewEmailService(userId, newEmail);
+        res.status(200).json(result);
     }
     catch (error) {
+        console.error('Error setting new email:', error);
+        if (error.message === "The Email is already taken" || error.message === "User Not Found") {
+            res.status(400).json({ message: error.message });
+            return;
+        }
         res.status(500).json({ message: 'Internal server error' });
     }
 });

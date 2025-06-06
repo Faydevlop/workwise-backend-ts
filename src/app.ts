@@ -132,12 +132,14 @@ io.on('connection', (socket) => {
   socket.on('typing', ({ senderId, receiverId }) => {
     // console.log(`${senderId} is typing to ${receiverId}`);
     // Emit the typing event only to the recipient's room
+    console.log(`Backend received typing from ${senderId} for ${receiverId}`);
     io.to(receiverId).emit('typing', { senderId });
   });
 
   socket.on('stopped-typing', ({ senderId, receiverId }) => {
     // console.log(`${senderId} stopped typing to ${receiverId}`);
     // Emit the stopped-typing event only to the recipient's room
+    console.log(`Backend received stopped-typing from ${senderId} for ${receiverId}`);
     io.to(receiverId).emit('stopped-typing', { senderId });
   });
   // --- END TYPING INDICATOR SOCKET EVENTS ---
@@ -155,45 +157,51 @@ io.on('connection', (socket) => {
 
   socket.on('message-seen', async ({ senderId, receiverId }) => {
     try {
-      // Update all messages from the sender to the receiver as seen
-      await Message.updateMany(
-        { sender: senderId, receiver: receiverId, messageStatus: 'delivered' },
-        { $set: { seen: true, messageStatus: 'seen' } }
-      );
+        // Update all messages from the sender to the receiver as seen
+        // Only update messages that are currently 'delivered' to 'seen'.
+        // Messages that are already 'seen' will remain 'seen'.
+        await Message.updateMany(
+            { sender: senderId, receiver: receiverId, messageStatus: 'delivered' },
+            { $set: { seen: true, messageStatus: 'seen' } }
+        );
 
-      // Notify the sender that their messages have been seen
-      io.to(senderId).emit('messages-seen', { senderId, receiverId });
-      console.log(`Messages from ${senderId} to ${receiverId} marked as seen.`);
+        // Notify the sender that their messages have been seen
+        io.to(senderId).emit('messages-seen', { senderId, receiverId });
+        console.log(`Messages from ${senderId} to ${receiverId} marked as seen.`);
     } catch (error) {
-      console.error('Failed to update seen status:', error);
+        console.error('Failed to update seen status:', error);
     }
-  });
+});
 
   socket.on('disconnect', async () => {
     const userId = socket.data.userId; // Retrieve the userId stored during 'register'
     console.log('user disconnected', socket.id, userId ? `(ID: ${userId})` : '');
 
     if (userId) {
-      // --- Emit 'stopped-typing' for the disconnected user to clear indicators on other clients ---
-      // This is a global emit, consider if you want to target specific users
-      // who might have been chatting with the disconnected user.
-      // For simplicity, for a direct chat, this might be sufficient.
-      io.emit('stopped-typing', { senderId: userId });
-      // --------------------------------------------------------------------------------------
+        // --- Emit 'stopped-typing' for the disconnected user to clear indicators on other clients ---
+        // This is a global emit, consider if you want to target specific users
+        // who might have been chatting with the disconnected user.
+        // For simplicity, for a direct chat, this might be sufficient.
+        io.emit('stopped-typing', { senderId: userId });
+        // --------------------------------------------------------------------------------------
 
-      try {
-        // Update messages that this user (who just disconnected) received
-        // and had previously marked as 'seen', back to 'delivered' and seen: false
-        await Message.updateMany(
-          { receiver: userId, messageStatus: 'seen' }, // Query: Find messages received by this user that are 'seen'
-          { $set: { messageStatus: 'delivered', seen: false } } // Update: Set status to 'delivered' and seen to false
-        );
-        console.log(`Messages for disconnected user ${userId} updated to 'delivered'.`);
-      } catch (error) {
-        console.error('Error updating message status on disconnect:', error);
-      }
+        // REMOVE THIS BLOCK ENTIRELY:
+        /*
+        try {
+            // Update messages that this user (who just disconnected) received
+            // and had previously marked as 'seen', back to 'delivered' and seen: false
+            await Message.updateMany(
+                { receiver: userId, messageStatus: 'seen' }, // Query: Find messages received by this user that are 'seen'
+                { $set: { messageStatus: 'delivered', seen: false } } // Update: Set status to 'delivered' and seen to false
+            );
+            console.log(`Messages for disconnected user ${userId} updated to 'delivered'.`);
+        } catch (error) {
+            console.error('Error updating message status on disconnect:', error);
+        }
+        */
+        // You only want the typing indicator to stop, not to revert message statuses.
     }
-  });
+});
 });
 
 

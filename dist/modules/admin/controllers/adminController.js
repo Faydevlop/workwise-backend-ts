@@ -1,4 +1,27 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -8,150 +31,72 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.adminChagePass = exports.adminDashboard = exports.deleteUser = exports.updateUser = exports.getSpecificUser = exports.getAllUsers = exports.AddUser = void 0;
-const bcrypt_1 = __importDefault(require("bcrypt"));
-const userModel_1 = __importDefault(require("../../employee/models/userModel"));
-const mailVerification_1 = __importDefault(require("../middlewares/mailVerification"));
-const leaveModel_1 = __importDefault(require("../../leaveManagement/models/leaveModel"));
-const departmentModel_1 = __importDefault(require("../../Department/model/departmentModel"));
-const payrollModel_1 = __importDefault(require("../../PayrollManagement/models/payrollModel"));
-const projectModel_1 = __importDefault(require("../models/projectModel"));
-const adminModel_1 = __importDefault(require("../models/adminModel"));
-function generateRandomPassword(length = 12) {
-    const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    let password = "";
-    for (let i = 0; i < length; i++) {
-        const randomIndex = Math.floor(Math.random() * characters.length);
-        password += characters[randomIndex];
-    }
-    return password;
-}
+const adminService = __importStar(require("../serviecs/adminService"));
 const AddUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         console.log("add user request is here");
-        const { firstName, lastName, email, dob, phone, gender, address, 
-        // department,
-        position, dateOfJoining, employeeStatus, } = req.body;
-        const existUser = yield userModel_1.default.findOne({ email });
-        if (existUser) {
-            res.status(400).json({ message: "User already Exists In this Email" });
-            return;
-        }
-        const randomPass = generateRandomPassword();
-        const hashedPassword = yield bcrypt_1.default.hash(randomPass, 10);
-        const newUser = new userModel_1.default({
-            firstName,
-            lastName,
-            email,
-            dob,
-            phone,
-            gender,
-            address,
-            profileImageUrl: `https://i.pinimg.com/564x/00/80/ee/0080eeaeaa2f2fba77af3e1efeade565.jpg`,
-            // department,
-            position,
-            dateOfJoining,
-            employeeStatus,
-            password: hashedPassword,
-        });
-        yield (0, mailVerification_1.default)(email, randomPass, req.body.position);
-        console.log('Password:', randomPass);
-        yield newUser.save();
+        yield adminService.createUser(req.body);
         res
             .status(201)
-            .json({ message: "User created successfully , Email verification sent" });
+            .json({ message: "User created successfully, Email verification sent" });
     }
     catch (error) {
         console.error("Error adding user:", error);
-        res.status(500).json({ message: "Server error" });
+        res.status(400).json({ message: "Server error" });
     }
 });
 exports.AddUser = AddUser;
 const getAllUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const allUsers = yield userModel_1.default.find().populate('department');
-        if (!allUsers) {
-            res.status(400).json({ message: "Users collection is empty" });
-            return;
-        }
-        res.status(201).json({ allUsers });
+        const allUsers = yield adminService.fetchAllUsers();
+        res.status(200).json({ allUsers });
     }
     catch (error) {
-        res.status(400).json({ message: "Somthing went Wrong" });
+        res.status(400).json({ message: "Something went Wrong" });
     }
 });
 exports.getAllUsers = getAllUsers;
 const getSpecificUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log("specific user request is here");
-    const { userId } = req.params;
     try {
-        const user = yield userModel_1.default.findById(userId).populate('department');
-        if (!user) {
-            res.status(400).json({ message: "User Nor found" });
-            return;
-        }
-        res.json(user);
+        const { userId } = req.params;
+        const user = yield adminService.fetchUserById(userId);
+        res.status(200).json(user);
     }
     catch (error) {
-        res.status(500).json({ message: "Server error", error });
+        res.status(404).json({ message: "Server error" });
     }
 });
 exports.getSpecificUser = getSpecificUser;
 const updateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { userId } = req.params;
-        const user = yield userModel_1.default.findById(userId);
-        if (!user) {
-            res.status(404).json({ message: "User not found" });
-            return;
-        }
-        user.firstName = req.body.firstName || user.firstName;
-        user.lastName = req.body.lastName || user.lastName;
-        user.email = req.body.email || user.email;
-        user.dob = req.body.dob || user.dob;
-        user.phone = req.body.phone || user.phone;
-        user.gender = req.body.gender || user.gender;
-        user.address = req.body.address || user.address;
-        // user.department = req.body.department || user.department;
-        user.position = req.body.position || user.position;
-        user.dateOfJoining = req.body.dateOfJoining || user.dateOfJoining;
-        user.employeeStatus = req.body.employeeStatus || user.employeeStatus;
-        const updatedUser = yield user.save();
+        const updatedUser = yield adminService.updateUserDetails(userId, req.body);
         res.status(200).json(updatedUser);
     }
     catch (error) {
-        res.status(500).json({ message: "Server error", error });
+        res.status(404).json({ message: "Server error" });
     }
 });
 exports.updateUser = updateUser;
 const deleteUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { userId } = req.params;
-        const user = yield userModel_1.default.findByIdAndDelete(userId);
-        if (!user) {
-            res.status(404).json({ message: "User not found" });
-            return;
-        }
-        res.status(200).json({ message: "User delete sucessfull" });
+        yield adminService.removeUser(userId);
+        res.status(200).json({ message: "User delete successful" });
     }
     catch (error) {
-        res.status(500).json({ message: "Server error", error });
+        res.status(404).json({ message: "Server error" });
     }
 });
 exports.deleteUser = deleteUser;
 const adminDashboard = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         console.log('req is here');
-        const leaves = yield leaveModel_1.default.find({ status: 'Pending' }).populate('userId');
-        const department = yield departmentModel_1.default.find();
-        const payroll = yield payrollModel_1.default.find().populate('employee');
-        const projects = yield projectModel_1.default.find().populate('department');
-        console.log(leaves, department, payroll, projects);
-        res.status(200).json({ leaves, department, payroll, projects });
+        const dashboardData = yield adminService.fetchDashboardData();
+        res.status(200).json(dashboardData);
     }
     catch (error) {
         console.log(error);
@@ -164,26 +109,12 @@ const adminChagePass = (req, res) => __awaiter(void 0, void 0, void 0, function*
         const { userId } = req.params;
         const { oldPassword, newPassword } = req.body;
         console.log(oldPassword, newPassword, 'here here here');
-        const admin = yield adminModel_1.default.findById(userId);
-        if (!admin) {
-            res.status(400).json({ message: 'Admin Not Found' });
-            return;
-        }
-        const isMatch = yield bcrypt_1.default.compare(oldPassword, admin.password);
-        if (!isMatch) {
-            res.status(400).json({ message: "Incorrect Old Password" });
-            return;
-        }
-        const saltRounds = 10;
-        const hashedNewPassword = yield bcrypt_1.default.hash(newPassword, saltRounds);
-        // Step 4: Update the admin's password with the new hashed password
-        admin.password = hashedNewPassword;
-        yield admin.save();
+        yield adminService.changeAdminPassword(userId, oldPassword, newPassword);
         res.status(200).json({ message: "Password changed successfully" });
     }
     catch (error) {
         console.error("Error changing admin password:", error);
-        res.status(500).json({ message: "Error changing password" });
+        res.status(400).json({ message: "Error changing password" });
     }
 });
 exports.adminChagePass = adminChagePass;

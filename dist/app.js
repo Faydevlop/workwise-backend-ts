@@ -36,17 +36,27 @@ const commentRoute_1 = __importDefault(require("./modules/TaskManagement/routes/
 const MeetingRoutes_1 = __importDefault(require("./modules/meetings/routes/MeetingRoutes"));
 const reqruitmentRoutes_1 = __importDefault(require("./modules/recruitment/routes/reqruitmentRoutes"));
 const authRoute_1 = require("./auth/authRoute/authRoute");
-const chatModel_1 = __importDefault(require("./modules/chat/chatModel"));
+const chatModel_1 = __importDefault(require("./modules/chat/chatModel")); // Ensure this path is correct
 const chatRoutes_1 = __importDefault(require("./modules/chat/chatRoutes"));
 const notificaitoRoutes_1 = __importDefault(require("./modules/notification/routes/notificaitoRoutes"));
 const app = (0, express_1.default)();
 const server = http_1.default.createServer(app);
 app.use(express_1.default.json());
+const allowedOrigins = ['http://localhost:5173', 'https://workwise-seven.vercel.app'];
 app.use((0, cors_1.default)({
-    origin: '*', // Your frontend URL
+    origin: function (origin, callback) {
+        if (!origin)
+            return callback(null, true); // allow non-browser requests like Postman
+        if (allowedOrigins.indexOf(origin) === -1) {
+            const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+            return callback(new Error(msg), false);
+        }
+        return callback(null, true);
+    },
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    credentials: true // Allow cookies to be sent
 }));
+app.options('*', (0, cors_1.default)());
 app.use((0, cookie_parser_1.default)());
 app.use(express_1.default.urlencoded({ extended: true }));
 app.use('/admin', adminRoute_1.default);
@@ -72,8 +82,9 @@ app.use((err, req, res, next) => {
 });
 const io = new socket_io_1.Server(server, {
     cors: {
-        origin: '*',
-        methods: ['GET', 'POST']
+        origin: ['http://localhost:5173', 'https://workwise-seven.vercel.app'],
+        methods: ['GET', 'POST'],
+        credentials: true
     }
 });
 exports.io = io;
@@ -81,10 +92,12 @@ io.on('connection', (socket) => {
     // When a user connects, join them to a room based on their user ID
     socket.on('register', (userId) => {
         socket.join(userId);
-        // console.log(`User ${userId} joined room ${userId}`);
+        // Store the userId directly on the socket object for easy access on disconnect
+        socket.data.userId = userId;
+        console.log(`User ${userId} joined room ${userId}`);
     });
     socket.on('message', (data) => __awaiter(void 0, void 0, void 0, function* () {
-        // console.log('message from client', data);
+        console.log('message from client', data);
         const newMessage = new chatModel_1.default({
             sender: data.sender,
             receiver: data.receiver,
@@ -103,31 +116,67 @@ io.on('connection', (socket) => {
         };
         io.to(data.sender).emit('update-last-message', lastMessage);
         io.to(data.receiver).emit('update-last-message', lastMessage);
-        // Optionally send the message back to the sender
+        // Optionally send the message back to the sender for immediate UI update
         socket.emit('message', data);
     }));
+    // --- START TYPING INDICATOR SOCKET EVENTS ---
+    socket.on('typing', ({ senderId, receiverId }) => {
+        // console.log(`${senderId} is typing to ${receiverId}`);
+        // Emit the typing event only to the recipient's room
+        console.log(`Backend received typing from ${senderId} for ${receiverId}`);
+        io.to(receiverId).emit('typing', { senderId });
+    });
+    socket.on('stopped-typing', ({ senderId, receiverId }) => {
+        // console.log(`${senderId} stopped typing to ${receiverId}`);
+        // Emit the stopped-typing event only to the recipient's room
+        console.log(`Backend received stopped-typing from ${senderId} for ${receiverId}`);
+        io.to(receiverId).emit('stopped-typing', { senderId });
+    });
+    // --- END TYPING INDICATOR SOCKET EVENTS ---
     socket.on('initiate-video-call', ({ senderId, receiverId, roomId }) => {
-        4;
-        // console.log(`Initiating video call from ${senderId} to ${receiverId}`);
+        console.log(`Initiating video call from ${senderId} to ${receiverId} with room ${roomId}`);
+        // This looks like a duplicate. Keep one.
         io.to(receiverId).emit('video-call-notification', { senderId, roomId });
     });
     socket.on('initiate-video-call', ({ senderId, receiverId, roomId }) => {
+        // This is a duplicate of the above.
         io.to(receiverId).emit('video-call-initiate', { senderId, roomId });
     });
     socket.on('message-seen', (_a) => __awaiter(void 0, [_a], void 0, function* ({ senderId, receiverId }) {
         try {
             // Update all messages from the sender to the receiver as seen
-            yield chatModel_1.default.updateMany({ sender: senderId, receiver: receiverId, messageStatus: 'delivered' }, { $set: { seen: true } }, { $set: { messageStatus: 'seen' } });
+            yield chatModel_1.default.updateMany({ sender: senderId, receiver: receiverId, messageStatus: 'delivered' }, { $set: { seen: true, messageStatus: 'seen' } });
             // Notify the sender that their messages have been seen
             io.to(senderId).emit('messages-seen', { senderId, receiverId });
+            console.log(`Messages from ${senderId} to ${receiverId} marked as seen.`);
         }
         catch (error) {
             console.error('Failed to update seen status:', error);
         }
     }));
-    socket.on('disconnect', () => {
-        // console.log('user disconnected', socket.id);
-    });
+    socket.on('disconnect', () => __awaiter(void 0, void 0, void 0, function* () {
+        const userId = socket.data.userId; // Retrieve the userId stored during 'register'
+        console.log('user disconnected', socket.id, userId ? `(ID: ${userId})` : '');
+        if (userId) {
+            // --- Emit 'stopped-typing' for the disconnected user to clear indicators on other clients ---
+            // This is a global emit, consider if you want to target specific users
+            // who might have been chatting with the disconnected user.
+            // For simplicity, for a direct chat, this might be sufficient.
+            io.emit('stopped-typing', { senderId: userId });
+            // --------------------------------------------------------------------------------------
+            try {
+                // Update messages that this user (who just disconnected) received
+                // and had previously marked as 'seen', back to 'delivered' and seen: false
+                yield chatModel_1.default.updateMany({ receiver: userId, messageStatus: 'seen' }, // Query: Find messages received by this user that are 'seen'
+                { $set: { messageStatus: 'delivered', seen: false } } // Update: Set status to 'delivered' and seen to false
+                );
+                console.log(`Messages for disconnected user ${userId} updated to 'delivered'.`);
+            }
+            catch (error) {
+                console.error('Error updating message status on disconnect:', error);
+            }
+        }
+    }));
 });
 mongoose_1.default.connect(process.env.MONGO_URI, {
     serverSelectionTimeoutMS: 50000 // Increase timeout

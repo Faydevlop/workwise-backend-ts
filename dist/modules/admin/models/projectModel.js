@@ -1,4 +1,5 @@
 "use strict";
+// src/models/projectModel.ts
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     var desc = Object.getOwnPropertyDescriptor(m, k);
@@ -35,6 +36,6 @@ const ProjectSchema = new mongoose_1.Schema({
     endDate: { type: Date, required: true },
     priority: { type: String, enum: ["low", "medium", "high"], required: true },
     description: { type: String },
-    department: { type: mongoose_1.Schema.Types.ObjectId, ref: "Department", required: true }
+    department: { type: mongoose_1.Schema.Types.ObjectId, ref: "Department", required: true },
 });
 exports.default = mongoose_1.default.model("Project", ProjectSchema);

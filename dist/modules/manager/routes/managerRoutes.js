@@ -10,5 +10,5 @@ const router = express_1.default.Router();
 // manager Login
 router.post('/login', managerAuth_1.managerLogin);
 // manager dashboard
-router.get('/dashboard/:managerId', jwtMiddleware_1.authenticateJWT, managerAuth_1.ManagerDashboard);
+router.get('/dashboard/:managerId', jwtMiddleware_1.authenticateJWT, managerAuth_1.managerDashboard);
 exports.default = router;

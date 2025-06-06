@@ -13,36 +13,23 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteTask = exports.listAttachments = exports.listTasks = exports.taskdetails = exports.listUsers = exports.uploadAttachments = exports.CreateTask = void 0;
-const taskModel_1 = __importDefault(require("../models/taskModel"));
-const projectModel_1 = __importDefault(require("../../admin/models/projectModel"));
-const userModel_1 = __importDefault(require("../../employee/models/userModel"));
-const taskModel_2 = __importDefault(require("../models/taskModel"));
+const taskService_1 = __importDefault(require("../services/taskService"));
 const CreateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log('task create reqeust is here');
+    console.log('task create request is here');
     const { ProjectId } = req.params;
     const { taskTitle, status, assignedTo, priority, startDate, dueDate, description, cat } = req.body;
     try {
-        const isProjectExist = yield projectModel_1.default.findById(ProjectId);
-        if (!isProjectExist) {
-            res.status(200).json({ message: 'Project not found' });
-            return;
-        }
-        const newTask = new taskModel_1.default({
-            projectId: ProjectId,
-            name: taskTitle,
-            description: description,
-            status: status,
-            dueDate: dueDate,
-            assignedTo: assignedTo,
-            createdAt: startDate,
-            priority: priority,
-            cat: cat
-        });
-        yield newTask.save();
-        res.status(200).json({ message: 'task created successfully' });
+        const result = yield taskService_1.default.createTask(ProjectId, taskTitle, description, status, dueDate, assignedTo, startDate, priority, cat);
+        res.status(200).json(result);
     }
     catch (error) {
-        res.status(500).json({ message: "Error creating project" });
+        console.error(error);
+        if (error.message === 'Project not found') {
+            res.status(200).json({ message: error.message });
+        }
+        else {
+            res.status(500).json({ message: "Error creating project" });
+        }
     }
 });
 exports.CreateTask = CreateTask;
@@ -57,27 +44,14 @@ const uploadAttachments = (req, res) => __awaiter(void 0, void 0, void 0, functi
         // File URL returned by Cloudinary
         const fileUrl = req.file.path; // Cloudinary URL
         const fileName = req.file.originalname; // Original file name
-        // Find the Task by taskId and update it with the new attachment
-        const updatedTask = yield taskModel_1.default.findByIdAndUpdate(taskId, {
-            $push: {
-                attachments: {
-                    fileName, // Store the original file name
-                    fileUrl, // Cloudinary URL
-                    uploadedAt: new Date(),
-                },
-            },
-        }, { new: true } // Return the updated document
-        );
-        if (!updatedTask) {
-            return res.status(404).json({ message: "Task not found" });
-        }
-        return res.status(200).json({
-            message: "Attachment uploaded successfully",
-            task: updatedTask,
-        });
+        const result = yield taskService_1.default.uploadAttachment(taskId, fileUrl, fileName);
+        return res.status(200).json(result);
     }
     catch (error) {
         console.error("Upload error:", error);
+        if (error.message === 'Task not found') {
+            return res.status(404).json({ message: error.message });
+        }
         res.status(500).json({ error: "Internal Server Error" });
     }
 });
@@ -86,47 +60,39 @@ const listUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('user list request is here');
     try {
         const { ProjectId } = req.params;
-        const projectDetails = yield projectModel_1.default.findById(ProjectId);
-        if (!projectDetails) {
-            res.status(404).json({ message: 'Project not found' });
-            return;
-        }
-        const userDetails = yield userModel_1.default.find({ department: projectDetails.department, position: 'Employee' });
-        if (!userDetails) {
-            res.status(404).json({ message: 'Department not found' });
-            return;
-        }
-        res.status(200).json({ users: userDetails });
+        const result = yield taskService_1.default.getProjectUsers(ProjectId);
+        res.status(200).json(result);
     }
     catch (error) {
-        res.status(500).json({ message: error });
+        if (error.message === 'Project not found' || error.message === 'Department not found') {
+            res.status(404).json({ message: error.message });
+        }
+        else {
+            res.status(500).json({ message: error });
+        }
     }
 });
 exports.listUsers = listUsers;
 const taskdetails = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { taskId } = req.params;
-        const taskDetails = yield taskModel_1.default.findById(taskId).populate('assignedTo');
-        if (!taskDetails) {
-            res.status(400).json({ message: 'Task is not found' });
-            return;
-        }
-        res.status(200).json({ task: taskDetails });
+        const result = yield taskService_1.default.getTaskDetails(taskId);
+        res.status(200).json(result);
     }
     catch (error) {
-        res.status(500).json({ message: error });
+        if (error.message === 'Task is not found') {
+            res.status(400).json({ message: error.message });
+        }
+        else {
+            res.status(500).json({ message: error });
+        }
     }
 });
 exports.taskdetails = taskdetails;
 const listTasks = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { employeeId } = req.params;
-        // Find tasks where the employee is assigned
-        const tasks = yield taskModel_1.default.find({ assignedTo: employeeId })
-            .populate('projectId') // Populate project details if needed
-            .populate('assignedTo') // Populate user details if needed
-            .populate('comments'); // Populate comments details if needed
-        // Send the tasks as a response
+        const tasks = yield taskService_1.default.getEmployeeTasks(employeeId);
         res.status(200).json(tasks);
     }
     catch (error) {
@@ -138,17 +104,14 @@ exports.listTasks = listTasks;
 const listAttachments = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { taskId } = req.params;
-        // Find the task by ID and select only the attachments field
-        const taskDetails = yield taskModel_2.default.findById(taskId, 'attachments');
-        if (!taskDetails) {
-            return res.status(400).json({ message: 'Task not found' });
-        }
-        console.log(taskDetails.attachments);
-        // Send the attachments array as a response
-        res.status(200).json({ attachments: taskDetails.attachments });
+        const result = yield taskService_1.default.getTaskAttachments(taskId);
+        res.status(200).json(result);
     }
     catch (error) {
         console.error('Error listing attachments:', error);
+        if (error.message === 'Task not found') {
+            return res.status(400).json({ message: error.message });
+        }
         res.status(500).json({ message: 'Internal server error' });
     }
 });
@@ -156,18 +119,14 @@ exports.listAttachments = listAttachments;
 const deleteTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { taskId } = req.params;
-        // Attempt to delete the task by ID
-        const deletedTask = yield taskModel_2.default.findByIdAndDelete(taskId);
-        // Check if the task was found and deleted
-        if (!deletedTask) {
-            return res.status(404).json({ message: 'Task not found or unable to delete the Task' });
-        }
-        // Return a success response
-        return res.status(200).json({ message: 'Task deleted successfully' });
+        const result = yield taskService_1.default.deleteTask(taskId);
+        return res.status(200).json(result);
     }
     catch (error) {
-        // Handle any errors that occur during the process
-        console.error(error); // Log the error for debugging purposes
+        console.error(error);
+        if (error.message === 'Task not found or unable to delete the Task') {
+            return res.status(404).json({ message: error.message });
+        }
         return res.status(500).json({ message: 'An error occurred while deleting the task' });
     }
 });

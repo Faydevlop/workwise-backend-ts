@@ -46,8 +46,8 @@ const HrLogin = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         // Set refresh token in HTTP-only cookie
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production', // Ensure the cookie is sent over HTTPS in production
-            sameSite: 'strict', // Prevent CSRF attacks
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
         res.status(200).json({ accessToken, hr: user });

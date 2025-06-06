@@ -13,45 +13,27 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.eachUserNotification = exports.getUsersSortedByLastMessage = exports.checkNotification = exports.createNotification = void 0;
-const notificationModel_1 = __importDefault(require("../model/notificationModel"));
-const mongoose_1 = __importDefault(require("mongoose"));
-const userModel_1 = __importDefault(require("../../employee/models/userModel"));
-const chatModel_1 = __importDefault(require("../../chat/chatModel"));
+const notificationService_1 = __importDefault(require("../services/notificationService"));
 const createNotification = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { senderId, receiverId, roomId } = req.body;
     try {
-        // Create a new notification in the database
-        const newNotification = new notificationModel_1.default({
-            sender: senderId,
-            receiver: receiverId,
-            type: 'video-call',
-            roomId: roomId,
-            timestamp: new Date()
-        });
-        yield newNotification.save();
-        res.status(200).json({ message: 'Video call notification sent!' });
+        const result = yield notificationService_1.default.createNotification(senderId, receiverId, roomId);
+        res.status(200).json(result);
     }
     catch (error) {
+        console.error("Error creating notification:", error);
         res.status(500).json({ error: 'Failed to send video call notification' });
     }
 });
 exports.createNotification = createNotification;
 const checkNotification = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { userId } = req.params;
-    // console.log('notificaion req is here');
     try {
-        // Find the notification for the user that hasn't been marked as sent
-        const notifications = yield notificationModel_1.default.find({
-            receiver: userId,
-            isNotificationSend: false
-        });
+        const notifications = yield notificationService_1.default.checkNotification(userId);
         res.status(200).json(notifications);
-        // If there are notifications, mark them as sent
-        if (notifications.length > 0) {
-            yield notificationModel_1.default.updateMany({ receiver: userId, isNotificationSend: false }, { $set: { isNotificationSend: true } });
-        }
     }
     catch (error) {
+        console.error("Error checking notifications:", error);
         res.status(500).json({ error: 'Failed to fetch notifications' });
     }
 });
@@ -59,48 +41,8 @@ exports.checkNotification = checkNotification;
 const getUsersSortedByLastMessage = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { currentUserId } = req.params;
-        // Fetch users who have exchanged messages with the current user
-        const latestMessages = yield chatModel_1.default.aggregate([
-            {
-                $match: {
-                    $or: [
-                        { sender: new mongoose_1.default.Types.ObjectId(currentUserId) },
-                        { receiver: new mongoose_1.default.Types.ObjectId(currentUserId) }
-                    ]
-                }
-            },
-            {
-                $sort: { timestamp: -1 } // Sort by latest messages first
-            },
-            {
-                $group: {
-                    _id: {
-                        $cond: [
-                            { $eq: ["$sender", new mongoose_1.default.Types.ObjectId(currentUserId)] },
-                            "$receiver",
-                            "$sender"
-                        ]
-                    },
-                    lastMessage: { $first: "$$ROOT" } // Capture the first (most recent) message for each user
-                }
-            }
-        ]);
-        // Extract user IDs from the aggregation result
-        const userIdsWithMessages = latestMessages.map((message) => message._id);
-        // Fetch user details for those who have exchanged messages
-        let usersWithMessages = yield userModel_1.default.find({ _id: { $in: userIdsWithMessages } });
-        // Also fetch all other users who haven't exchanged messages yet
-        let usersWithoutMessages = yield userModel_1.default.find({
-            _id: { $nin: [new mongoose_1.default.Types.ObjectId(currentUserId), ...userIdsWithMessages] }
-        });
-        // Combine both sets of users, placing those with recent messages on top
-        let allUsers = [
-            ...usersWithMessages, // Users with messages (sorted by most recent)
-            ...usersWithoutMessages // Users without any message interaction
-        ];
-        console.log('Full Users List:', allUsers);
-        // Return the users list in the response
-        res.status(200).json({ users: allUsers });
+        const result = yield notificationService_1.default.getUsersSortedByLastMessage(currentUserId);
+        res.status(200).json(result);
     }
     catch (error) {
         console.error("Error fetching users sorted by last message:", error);
@@ -112,15 +54,17 @@ const eachUserNotification = (req, res) => __awaiter(void 0, void 0, void 0, fun
     try {
         const { userId } = req.params;
         console.log('notification req is here');
-        const allnotifications = yield notificationModel_1.default.find({ receiver: userId, type: 'message' });
-        if (!allnotifications) {
-            res.status(400).json({ message: 'No Notifications' });
-            return;
-        }
-        res.status(200).json({ notifications: allnotifications });
+        const result = yield notificationService_1.default.getUserNotifications(userId);
+        res.status(200).json(result);
     }
     catch (error) {
-        res.status(500).json({ message: "Error fetching data" });
+        if (error.message === 'No Notifications') {
+            res.status(400).json({ message: error.message });
+        }
+        else {
+            console.error("Error fetching user notifications:", error);
+            res.status(500).json({ message: "Error fetching data" });
+        }
     }
 });
 exports.eachUserNotification = eachUserNotification;

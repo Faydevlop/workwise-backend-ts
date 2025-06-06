@@ -13,98 +13,63 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.updataJonlist = exports.getUserData = exports.deleteJobapplications = exports.listspecific = exports.listIReq = exports.referJob = exports.deleteItem = exports.listrquirements = exports.createRecruitment = void 0;
-const recruitementMode_1 = __importDefault(require("../model/recruitementMode"));
-const JobReferral_1 = __importDefault(require("../model/JobReferral"));
+const recruitmentService_1 = __importDefault(require("../services/recruitmentService"));
 const createRecruitment = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('Received data:', req.body);
     try {
-        // Extract job post data from the request body
-        const { jobTitle, role, department, jobDescription, requirements, responsibilities, location, employmentType, salaryRange, applicationProcess, contactEmail, contactPhone, applicationDeadline, eligibility, } = req.body;
-        // Basic validation
-        if (!jobTitle || !role || !department || !jobDescription || !requirements || !responsibilities || !location || !employmentType || !salaryRange || !applicationProcess || !contactEmail || !contactPhone || !applicationDeadline || !eligibility) {
-            res.status(400).json({ message: 'All fields are required.' });
-            return;
-        }
-        // Create a new job post instance
-        const newJobPost = new recruitementMode_1.default({
-            jobTitle,
-            role,
-            department,
-            jobDescription,
-            requirements,
-            responsibilities,
-            location,
-            employmentType,
-            salaryRange,
-            applicationProcess,
-            contactEmail,
-            contactPhone,
-            applicationDeadline: new Date(applicationDeadline), // Ensure this is saved as a Date object
-            eligibilityCriteria: eligibility,
-        });
-        // Save the job post to the database
-        yield newJobPost.save();
-        // Respond with success
-        res.status(201).json({ message: 'Job post created successfully', jobPost: newJobPost });
+        const result = yield recruitmentService_1.default.createRecruitment(req.body);
+        res.status(201).json(result);
     }
     catch (error) {
-        // Handle errors
         console.error('Error creating job post:', error);
-        res.status(500).json({ message: 'Internal Server Error' });
+        if (error.message === 'All fields are required.') {
+            res.status(400).json({ message: error.message });
+        }
+        else {
+            res.status(500).json({ message: 'Internal Server Error' });
+        }
     }
 });
 exports.createRecruitment = createRecruitment;
 const listrquirements = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const listingReq = yield recruitementMode_1.default.find();
-        if (!listingReq) {
-            res.status(400).json({ message: 'No Job Listing found' });
-            return;
-        }
-        res.status(200).json({ listingData: listingReq });
+        const result = yield recruitmentService_1.default.listRecruitments();
+        res.status(200).json(result);
     }
     catch (error) {
-        res.status(500).json({ message: 'Internal Server Error' });
+        if (error.message === 'No Job Listing found') {
+            res.status(400).json({ message: error.message });
+        }
+        else {
+            res.status(500).json({ message: 'Internal Server Error' });
+        }
     }
 });
 exports.listrquirements = listrquirements;
 const deleteItem = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { listId } = req.params;
-        const deletedData = yield recruitementMode_1.default.findByIdAndDelete(listId);
-        if (!deletedData) {
-            res.status(400).json({ message: 'unaible to delete' });
-            return;
-        }
-        res.status(200).json({ message: 'deleted succesefull' });
+        const result = yield recruitmentService_1.default.deleteRecruitment(listId);
+        res.status(200).json(result);
     }
     catch (error) {
-        res.status(500).json({ message: 'Internal Server Error' });
+        if (error.message === 'Unable to delete') {
+            res.status(400).json({ message: error.message });
+        }
+        else {
+            res.status(500).json({ message: 'Internal Server Error' });
+        }
     }
 });
 exports.deleteItem = deleteItem;
 const referJob = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     try {
-        const { name, email, phone, address, qualifications, portfolio, referer, jobId } = req.body;
         const resumeUrl = (_a = req.file) === null || _a === void 0 ? void 0 : _a.path; // Cloudinary file URL
         console.log('Resume URL:', resumeUrl);
-        // Create a new job referral entry in the database
-        const jobReferral = new JobReferral_1.default({
-            name,
-            email,
-            phone,
-            address,
-            qualifications,
-            portfolio,
-            referer,
-            resume: resumeUrl,
-            jobId
-        });
-        yield jobReferral.save();
-        res.status(200).json({
-            message: 'Job referred successfully'
-        });
+        const referralData = Object.assign(Object.assign({}, req.body), { resumeUrl });
+        const result = yield recruitmentService_1.default.referJob(referralData);
+        res.status(200).json(result);
     }
     catch (error) {
         res.status(500).json({ message: 'Error referring job', error });
@@ -113,31 +78,32 @@ const referJob = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 exports.referJob = referJob;
 const listIReq = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const listData = yield JobReferral_1.default.find().populate('referer').populate('jobId');
-        if (!listData) {
-            res.status(400).json({ message: "No Job Listing found" });
-            return;
-        }
-        // console.log('here is the data',listData);
-        res.status(200).json({ listData });
+        const result = yield recruitmentService_1.default.listReferrals();
+        res.status(200).json(result);
     }
     catch (error) {
-        res.status(500).json({ message: 'Error listing job', error });
+        if (error.message === 'No Job Listing found') {
+            res.status(400).json({ message: error.message });
+        }
+        else {
+            res.status(500).json({ message: 'Error listing job', error });
+        }
     }
 });
 exports.listIReq = listIReq;
 const listspecific = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { reqId } = req.params;
-        const listDetail = yield JobReferral_1.default.findById(reqId).populate('jobId').populate('referer');
-        if (!listDetail) {
-            res.status(400).json({ message: 'No data found' });
-            return;
-        }
-        res.status(200).json({ listDetail });
+        const result = yield recruitmentService_1.default.getReferralDetails(reqId);
+        res.status(200).json(result);
     }
     catch (error) {
-        res.status(500).json({ message: 'Error listing job', error });
+        if (error.message === 'No data found') {
+            res.status(400).json({ message: error.message });
+        }
+        else {
+            res.status(500).json({ message: 'Error listing job', error });
+        }
     }
 });
 exports.listspecific = listspecific;
@@ -145,65 +111,52 @@ const deleteJobapplications = (req, res) => __awaiter(void 0, void 0, void 0, fu
     try {
         const { applicationId } = req.params;
         console.log('delete req is here');
-        const applicationdata = yield JobReferral_1.default.findByIdAndDelete(applicationId);
-        if (!applicationdata) {
-            res.status(400).json({ message: 'no application found' });
-            return;
-        }
-        res.status(200).json({ message: 'application deleted successfully' });
+        const result = yield recruitmentService_1.default.deleteJobApplication(applicationId);
+        res.status(200).json(result);
     }
     catch (error) {
+        if (error.message === 'No application found') {
+            res.status(400).json({ message: error.message });
+        }
+        else {
+            res.status(500).json({ message: 'Internal Server Error' });
+        }
     }
 });
 exports.deleteJobapplications = deleteJobapplications;
 const getUserData = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { jobId } = req.params;
-        const listingdata = yield recruitementMode_1.default.findById(jobId);
-        if (!listingdata) {
-            res.status(400).json({ message: 'listig data not found' });
-            return;
-        }
-        res.status(200).json({ listdata: listingdata });
+        const result = yield recruitmentService_1.default.getJobDetails(jobId);
+        res.status(200).json(result);
     }
     catch (error) {
+        if (error.message === 'Listing data not found') {
+            res.status(400).json({ message: error.message });
+        }
+        else {
+            res.status(500).json({ message: 'Internal Server Error' });
+        }
     }
 });
 exports.getUserData = getUserData;
 const updataJonlist = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { jobId } = req.params;
-        const { id, jobTitle, role, department, jobDescription, requirements, responsibilities, location, employmentType, salaryRange, applicationProcess, contactEmail, contactPhone, applicationDeadline, eligibility } = req.body;
-        if (!jobId) {
-            res.status(400).json({ message: 'Job ID is required' });
-            return;
-        }
-        const updatedJob = yield recruitementMode_1.default.findByIdAndUpdate(jobId, {
-            jobTitle,
-            role,
-            department,
-            jobDescription,
-            requirements,
-            responsibilities,
-            location,
-            employmentType,
-            salaryRange,
-            applicationProcess,
-            contactEmail,
-            contactPhone,
-            applicationDeadline,
-            eligibility
-        }, { new: true } // Return the updated document
-        );
-        if (!updatedJob) {
-            res.status(404).json({ message: 'Job not found' });
-            return;
-        }
-        res.status(200).json({ message: 'Job updated successfully', job: updatedJob });
+        const result = yield recruitmentService_1.default.updateJobListing(jobId, req.body);
+        res.status(200).json(result);
     }
     catch (error) {
         console.error('Error updating job:', error);
-        res.status(500).json({ message: 'Internal server error' });
+        if (error.message === 'Job ID is required') {
+            res.status(400).json({ message: error.message });
+        }
+        else if (error.message === 'Job not found') {
+            res.status(404).json({ message: error.message });
+        }
+        else {
+            res.status(500).json({ message: 'Internal server error' });
+        }
     }
 });
 exports.updataJonlist = updataJonlist;
