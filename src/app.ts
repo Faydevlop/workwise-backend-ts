@@ -32,10 +32,11 @@ const server = http.createServer(app)
 
 app.use(express.json());
 app.use(cors({
-  origin: '*', // Your frontend URL, or ['http://localhost:5173', 'http://yourdomain.com'] for specific origins
+  origin: ['http://localhost:5173', 'https://workwise-seven.vercel.app'],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true // Allow cookies to be sent
+  credentials: true
 }));
+
 
 app.use(cookieParser());
 

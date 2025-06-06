@@ -1,15 +1,7 @@
-import mongoose, { Document, Schema } from "mongoose";
+// src/models/projectModel.ts
 
-interface IProject extends Document {
-  name: string;
-  status: string;
-  startDate: Date;
-  endDate: Date;
-  priority: string;
-  description: string;
-  department: mongoose.Schema.Types.ObjectId;
-
-}
+import mongoose, { Schema } from "mongoose";
+import { IProject } from "../types/project.d"; // Import the interface
 
 const ProjectSchema: Schema = new Schema({
   name: { type: String, required: true },
@@ -22,9 +14,7 @@ const ProjectSchema: Schema = new Schema({
   endDate: { type: Date, required: true },
   priority: { type: String, enum: ["low", "medium", "high"], required: true },
   description: { type: String },
-  department: { type: Schema.Types.ObjectId, ref: "Department", required: true }
-
- 
+  department: { type: Schema.Types.ObjectId, ref: "Department", required: true },
 });
 
 export default mongoose.model<IProject>("Project", ProjectSchema);
