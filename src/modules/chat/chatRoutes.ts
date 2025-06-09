@@ -51,7 +51,6 @@ router.post('/mark-as-seen', async (req, res) => {
   try {
     await Message.updateMany(
       { sender: senderId, receiver: receiverId, messageStatus: 'delivered' },
-      {  seen: true  },
       { messageStatus: 'seen' }
     );
     

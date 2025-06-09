@@ -161,9 +161,9 @@ io.on('connection', (socket) => {
         // Only update messages that are currently 'delivered' to 'seen'.
         // Messages that are already 'seen' will remain 'seen'.
         await Message.updateMany(
-            { sender: senderId, receiver: receiverId, messageStatus: 'delivered' },
-            { $set: { seen: true, messageStatus: 'seen' } }
-        );
+    { sender: senderId, receiver: receiverId, messageStatus: 'delivered' },
+    { $set: { messageStatus: 'seen' } }
+);
 
         // Notify the sender that their messages have been seen
         io.to(senderId).emit('messages-seen', { senderId, receiverId });
@@ -178,28 +178,11 @@ io.on('connection', (socket) => {
     console.log('user disconnected', socket.id, userId ? `(ID: ${userId})` : '');
 
     if (userId) {
-        // --- Emit 'stopped-typing' for the disconnected user to clear indicators on other clients ---
-        // This is a global emit, consider if you want to target specific users
-        // who might have been chatting with the disconnected user.
-        // For simplicity, for a direct chat, this might be sufficient.
+    
         io.emit('stopped-typing', { senderId: userId });
-        // --------------------------------------------------------------------------------------
 
-        // REMOVE THIS BLOCK ENTIRELY:
-        /*
-        try {
-            // Update messages that this user (who just disconnected) received
-            // and had previously marked as 'seen', back to 'delivered' and seen: false
-            await Message.updateMany(
-                { receiver: userId, messageStatus: 'seen' }, // Query: Find messages received by this user that are 'seen'
-                { $set: { messageStatus: 'delivered', seen: false } } // Update: Set status to 'delivered' and seen to false
-            );
-            console.log(`Messages for disconnected user ${userId} updated to 'delivered'.`);
-        } catch (error) {
-            console.error('Error updating message status on disconnect:', error);
-        }
-        */
-        // You only want the typing indicator to stop, not to revert message statuses.
+
+       
     }
 });
 });
